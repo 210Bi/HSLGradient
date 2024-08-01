@@ -1,3 +1,4 @@
+use std::io::Error;
 use std::io;
 use std::io::Write;
 
@@ -19,13 +20,13 @@ struct Args {
 
 type Color<T> = (T, T, T);
 
-fn main() {
+fn main() -> Result<(), Error> {
   let args = Args::parse();
 
-  if args.gradient_length <= args.colors.len() {
-    eprintln!("[error] Gradient length must be greater than the color amount");
-    std::process::exit(1);
-  }
+  assert!(
+    args.gradient_length > args.colors.len(),
+    "Gradient length must be greater than the color amount"
+  );
 
   let hsl_colors: Vec<Color<f64>> = args.colors.iter()
     .map(|hex| hex_to_hsl(hex))
@@ -39,24 +40,24 @@ fn main() {
   for hex_color in hex_gradient {
     print_hex_color(&hex_color, args.inline_colors);
   }
+
+  Ok(())
 }
 
 fn print_hex_color(hex: &str, inline: bool) {
   let (r, g, b) = hex_to_rgb(&hex);
   let colored_text = hex.truecolor(r, g, b);
 
-  match inline {
-    true => {
-      print!("{} ", colored_text);
-      io::stdout().flush().unwrap();
-    },
-    false => {
-      let colored_rgb_text = format!("({}, {}, {})", r, g, b).truecolor(r, g, b);
-      let colored_background = " ".repeat(5).on_truecolor(r, g, b);
-
-      println!("{} {} {}", colored_text, colored_background, colored_rgb_text);
-    },
+  if inline {
+    print!("{} ", colored_text);
+    io::stdout().flush().unwrap();
+    return;
   }
+
+  let colored_rgb_text = format!("({}, {}, {})", r, g, b).truecolor(r, g, b);
+  let colored_background = " ".repeat(5).on_truecolor(r, g, b);
+
+  println!("{} {} {}", colored_text, colored_background, colored_rgb_text);
 }
 
 fn hex_to_rgb(hex: &str) -> Color<u8> {
